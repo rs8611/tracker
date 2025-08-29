@@ -30,7 +30,6 @@
                 onAuthStateChanged(auth, async (user) => {
                     if (user) {
                         userId = user.uid;
-                        document.getElementById('userIdDisplay').textContent = `User ID: ${userId}`;
                         startListeningForData();
                     } else {
                         if (initialAuthToken) {
@@ -43,7 +42,6 @@
 
             } catch (error) {
                 console.error("Firebase initialization failed:", error);
-                document.getElementById('userIdDisplay').textContent = `User ID: Error`;
             }
         }
 
@@ -59,8 +57,6 @@
                 updateProgress();
             }, (error) => {
                 console.error("Error listening to document:", error);
-                renderCalendar();
-                updateProgress();
             });
         }
         
@@ -326,7 +322,6 @@
                 </div>
                 <div id="calendar" class="grid calendar-grid gap-1"></div>
             </div>
-            <div id="userIdDisplay" class="mt-4 text-center text-sm text-gray-500"></div>
         </main>
 
         <footer class="text-center mt-8 text-sm text-gray-500">
