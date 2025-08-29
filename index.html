@@ -8,7 +8,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInWithCustomToken, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, onSnapshot, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         setLogLevel('Debug');
@@ -29,25 +29,26 @@
                 auth = getAuth(app);
                 db = getFirestore(app);
 
-                if (initialAuthToken) {
-                    await signInWithCustomToken(auth, initialAuthToken);
-                } else {
-                    await signInAnonymously(auth);
-                }
-
-                userId = auth.currentUser?.uid || crypto.randomUUID();
-                document.getElementById('userIdDisplay').textContent = `User ID: ${userId}`;
-                window.firebaseInitialized = true;
-                
-                startListeningForData();
+                onAuthStateChanged(auth, async (user) => {
+                    if (user) {
+                        userId = user.uid;
+                        document.getElementById('userIdDisplay').textContent = `User ID: ${userId}`;
+                        window.firebaseInitialized = true;
+                        startListeningForData();
+                    } else {
+                        // Sign in anonymously if no user is authenticated
+                        if (initialAuthToken) {
+                             await signInWithCustomToken(auth, initialAuthToken);
+                        } else {
+                             await signInAnonymously(auth);
+                        }
+                    }
+                });
 
             } catch (error) {
                 console.error("Firebase initialization failed:", error);
                 window.firebaseInitialized = false;
-                userId = 'anonymous';
-                document.getElementById('userIdDisplay').textContent = `User ID: ${userId}`;
-                renderCalendar();
-                updateProgress();
+                document.getElementById('userIdDisplay').textContent = `User ID: Error`;
             }
         }
 
@@ -76,8 +77,6 @@
                 } catch (error) {
                     console.error("Failed to save data to Firestore:", error);
                 }
-            } else {
-                localStorage.setItem('pregnancyTrackerCheckedDays', JSON.stringify(checkedDays));
             }
         }
 
