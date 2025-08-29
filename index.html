@@ -19,6 +19,7 @@
 
         let db, auth;
         let userId;
+        let checkedDays = {};
 
         window.firebaseInitialized = false;
 
@@ -45,26 +46,29 @@
                 window.firebaseInitialized = false;
                 userId = 'anonymous';
                 document.getElementById('userIdDisplay').textContent = `User ID: ${userId}`;
-                initializeTracker(JSON.parse(localStorage.getItem('pregnancyTrackerCheckedDays')) || {});
+                renderCalendar();
+                updateProgress();
             }
         }
 
-        async function startListeningForData() {
+        function startListeningForData() {
             const trackerDocRef = doc(db, `/artifacts/${appId}/users/${userId}/pregnancy-tracker/tracker-data`);
             onSnapshot(trackerDocRef, (docSnap) => {
                 if (docSnap.exists()) {
-                    const data = docSnap.data();
-                    initializeTracker(data.checkedDays || {});
+                    checkedDays = docSnap.data().checkedDays || {};
                 } else {
-                    initializeTracker({});
+                    checkedDays = {};
                 }
+                renderCalendar();
+                updateProgress();
             }, (error) => {
                 console.error("Error listening to document:", error);
-                initializeTracker(JSON.parse(localStorage.getItem('pregnancyTrackerCheckedDays')) || {});
+                renderCalendar();
+                updateProgress();
             });
         }
         
-        async function saveCheckedDays(checkedDays) {
+        async function saveCheckedDays() {
             if (window.firebaseInitialized && userId) {
                 const trackerDocRef = doc(db, `/artifacts/${appId}/users/${userId}/pregnancy-tracker/tracker-data`);
                 try {
@@ -77,138 +81,133 @@
             }
         }
 
-        function initializeTracker(checkedDays) {
-            const startDate = new Date('2025-05-29T00:00:00');
-            const dueDate = new Date('2026-03-05T00:00:00');
-            const totalDays = Math.round((dueDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
+        const startDate = new Date('2025-05-29T00:00:00');
+        const dueDate = new Date('2026-03-05T00:00:00');
+        const totalDays = Math.round((dueDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
 
-            let currentDate = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+        let currentDate = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
 
-            const calendar = document.getElementById('calendar');
-            const monthYearEl = document.getElementById('monthYear');
-            const prevMonthBtn = document.getElementById('prevMonth');
-            const nextMonthBtn = document.getElementById('nextMonth');
+        const calendar = document.getElementById('calendar');
+        const monthYearEl = document.getElementById('monthYear');
+        const prevMonthBtn = document.getElementById('prevMonth');
+        const nextMonthBtn = document.getElementById('nextMonth');
 
-            const currentWeekEl = document.getElementById('currentWeek');
-            const currentTrimesterEl = document.getElementById('currentTrimester');
-            const daysAlongEl = document.getElementById('daysAlong');
-            const progressBarEl = document.getElementById('progressBar');
-            const progressTextEl = document.getElementById('progressText');
+        const currentWeekEl = document.getElementById('currentWeek');
+        const currentTrimesterEl = document.getElementById('currentTrimester');
+        const daysAlongEl = document.getElementById('daysAlong');
+        const progressBarEl = document.getElementById('progressBar');
+        const progressTextEl = document.getElementById('progressText');
 
-            function renderCalendar() {
-                calendar.innerHTML = '';
-                const month = currentDate.getMonth();
-                const year = currentDate.getFullYear();
+        function renderCalendar() {
+            calendar.innerHTML = '';
+            const month = currentDate.getMonth();
+            const year = currentDate.getFullYear();
 
-                monthYearEl.textContent = `${currentDate.toLocaleString('default', { month: 'long' })} ${year}`;
+            monthYearEl.textContent = `${currentDate.toLocaleString('default', { month: 'long' })} ${year}`;
 
-                const firstDayOfMonth = new Date(year, month, 1).getDay();
-                const daysInMonth = new Date(year, month + 1, 0).getDate();
+            const firstDayOfMonth = new Date(year, month, 1).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
 
-                for (let i = 0; i < firstDayOfMonth; i++) {
-                    calendar.appendChild(document.createElement('div'));
-                }
-
-                for (let i = 1; i <= daysInMonth; i++) {
-                    const dayDate = new Date(year, month, i);
-                    if (dayDate < startDate || dayDate > dueDate) continue;
-
-                    const dayEl = document.createElement('div');
-                    dayEl.className = 'day p-2 h-16 md:h-20 flex flex-col justify-start items-center border border-gray-200 rounded-lg';
-                    
-                    const dayNumber = document.createElement('span');
-                    dayNumber.textContent = i;
-                    dayEl.appendChild(dayNumber);
-
-                    const dateString = dayDate.toISOString().split('T')[0];
-
-                    const checkbox = document.createElement('input');
-                    checkbox.type = 'checkbox';
-                    checkbox.className = 'day-checkbox';
-                    checkbox.dataset.date = dateString;
-                    checkbox.checked = !!checkedDays[dateString];
-                    dayEl.appendChild(checkbox);
-
-                    if (checkedDays[dateString]) {
-                        dayEl.classList.add('checked');
-                    }
-
-                    const today = new Date();
-                    if (dayDate.toDateString() === today.toDateString()) {
-                        dayEl.classList.add('today');
-                    }
-                    
-                    const daysSinceStart = Math.round((dayDate - startDate) / (1000 * 60 * 60 * 24));
-
-                    if ((daysSinceStart + 1) % 7 === 0) {
-                        const weekNumber = (daysSinceStart + 1) / 7;
-                        const weekNumberText = document.createElement('p');
-                        weekNumberText.textContent = `${weekNumber} Weeks!!!`;
-                        weekNumberText.className = 'milestone-text';
-                        dayEl.appendChild(weekNumberText);
-                    }
-                    
-                    if (dayDate.toDateString() === dueDate.toDateString()) {
-                        dayEl.classList.add('due-date');
-                        const dueDateText = document.createElement('p');
-                        dueDateText.textContent = 'Due Date!';
-                        dueDateText.className = 'text-xs mt-1 font-bold';
-                        dayEl.appendChild(dueDateText);
-                    }
-
-                    calendar.appendChild(dayEl);
-                }
+            for (let i = 0; i < firstDayOfMonth; i++) {
+                calendar.appendChild(document.createElement('div'));
             }
 
-            function updateProgress() {
-                const checkedCount = Object.keys(checkedDays).length;
-                const daysSinceStart = Math.floor((new Date() - startDate) / (1000 * 60 * 60 * 24)) + 1;
+            for (let i = 1; i <= daysInMonth; i++) {
+                const dayDate = new Date(year, month, i);
+                if (dayDate < startDate || dayDate > dueDate) continue;
+
+                const dayEl = document.createElement('div');
+                dayEl.className = 'day p-2 h-16 md:h-20 flex flex-col justify-start items-center border border-gray-200 rounded-lg';
                 
-                const currentWeek = Math.ceil(daysSinceStart / 7);
-                currentWeekEl.textContent = currentWeek > 40 ? 40 : currentWeek;
+                const dayNumber = document.createElement('span');
+                dayNumber.textContent = i;
+                dayEl.appendChild(dayNumber);
 
-                let trimester = 1;
-                if (currentWeek > 27) trimester = 3;
-                else if (currentWeek > 13) trimester = 2;
-                currentTrimesterEl.textContent = trimester;
+                const dateString = dayDate.toISOString().split('T')[0];
 
-                daysAlongEl.textContent = `${checkedCount} / ${totalDays}`;
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.className = 'day-checkbox';
+                checkbox.dataset.date = dateString;
+                checkbox.checked = !!checkedDays[dateString];
+                dayEl.appendChild(checkbox);
 
-                const progressPercentage = (checkedCount / totalDays) * 100;
-                progressBarEl.style.width = `${progressPercentage}%`;
-                progressTextEl.textContent = `${Math.round(progressPercentage)}% Complete`;
-            }
-
-            calendar.addEventListener('click', function(e) {
-                if (e.target.classList.contains('day-checkbox')) {
-                    const date = e.target.dataset.date;
-                    if (e.target.checked) {
-                        checkedDays[date] = true;
-                        e.target.parentElement.classList.add('checked');
-                    } else {
-                        delete checkedDays[date];
-                        e.target.parentElement.classList.remove('checked');
-                    }
-                    saveCheckedDays(checkedDays);
-                    updateProgress();
+                if (checkedDays[dateString]) {
+                    dayEl.classList.add('checked');
                 }
-            });
 
-            prevMonthBtn.addEventListener('click', () => {
-                currentDate.setMonth(currentDate.getMonth() - 1);
-                renderCalendar();
-            });
+                const today = new Date();
+                if (dayDate.toDateString() === today.toDateString()) {
+                    dayEl.classList.add('today');
+                }
+                
+                const daysSinceStart = Math.round((dayDate - startDate) / (1000 * 60 * 60 * 24));
 
-            nextMonthBtn.addEventListener('click', () => {
-                currentDate.setMonth(currentDate.getMonth() + 1);
-                renderCalendar();
-            });
-            
-            currentDate = new Date();
-            currentDate.setDate(1);
-            renderCalendar();
-            updateProgress();
+                if ((daysSinceStart + 1) % 7 === 0) {
+                    const weekNumber = (daysSinceStart + 1) / 7;
+                    const weekNumberText = document.createElement('p');
+                    weekNumberText.textContent = `${weekNumber} Weeks!!!`;
+                    weekNumberText.className = 'milestone-text';
+                    dayEl.appendChild(weekNumberText);
+                }
+                
+                if (dayDate.toDateString() === dueDate.toDateString()) {
+                    dayEl.classList.add('due-date');
+                    const dueDateText = document.createElement('p');
+                    dueDateText.textContent = 'Due Date!';
+                    dueDateText.className = 'text-xs mt-1 font-bold';
+                    dayEl.appendChild(dueDateText);
+                }
+
+                calendar.appendChild(dayEl);
+            }
         }
+
+        function updateProgress() {
+            const checkedCount = Object.keys(checkedDays).length;
+            const daysSinceStart = Math.floor((new Date() - startDate) / (1000 * 60 * 60 * 24)) + 1;
+            
+            const currentWeek = Math.ceil(daysSinceStart / 7);
+            currentWeekEl.textContent = currentWeek > 40 ? 40 : currentWeek;
+
+            let trimester = 1;
+            if (currentWeek > 27) trimester = 3;
+            else if (currentWeek > 13) trimester = 2;
+            currentTrimesterEl.textContent = trimester;
+
+            daysAlongEl.textContent = `${checkedCount} / ${totalDays}`;
+
+            const progressPercentage = (checkedCount / totalDays) * 100;
+            progressBarEl.style.width = `${progressPercentage}%`;
+            progressTextEl.textContent = `${Math.round(progressPercentage)}% Complete`;
+        }
+
+        calendar.addEventListener('click', function(e) {
+            if (e.target.classList.contains('day-checkbox')) {
+                const date = e.target.dataset.date;
+                if (e.target.checked) {
+                    checkedDays[date] = true;
+                } else {
+                    delete checkedDays[date];
+                }
+                saveCheckedDays();
+            }
+        });
+
+        prevMonthBtn.addEventListener('click', () => {
+            currentDate.setMonth(currentDate.getMonth() - 1);
+            renderCalendar();
+        });
+
+        nextMonthBtn.addEventListener('click', () => {
+            currentDate.setMonth(currentDate.getMonth() + 1);
+            renderCalendar();
+        });
+        
+        currentDate = new Date();
+        currentDate.setDate(1);
+        renderCalendar();
+        updateProgress();
 
         initializeFirebase();
     </script>
