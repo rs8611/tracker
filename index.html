@@ -21,8 +21,6 @@
         let userId;
         let checkedDays = {};
 
-        window.firebaseInitialized = false;
-
         async function initializeFirebase() {
             try {
                 const app = initializeApp(firebaseConfig);
@@ -33,10 +31,8 @@
                     if (user) {
                         userId = user.uid;
                         document.getElementById('userIdDisplay').textContent = `User ID: ${userId}`;
-                        window.firebaseInitialized = true;
                         startListeningForData();
                     } else {
-                        // Sign in anonymously if no user is authenticated
                         if (initialAuthToken) {
                              await signInWithCustomToken(auth, initialAuthToken);
                         } else {
@@ -47,7 +43,6 @@
 
             } catch (error) {
                 console.error("Firebase initialization failed:", error);
-                window.firebaseInitialized = false;
                 document.getElementById('userIdDisplay').textContent = `User ID: Error`;
             }
         }
@@ -70,7 +65,7 @@
         }
         
         async function saveCheckedDays() {
-            if (window.firebaseInitialized && userId) {
+            if (userId) {
                 const trackerDocRef = doc(db, `/artifacts/${appId}/users/${userId}/pregnancy-tracker/tracker-data`);
                 try {
                     await setDoc(trackerDocRef, { checkedDays });
@@ -204,11 +199,6 @@
             renderCalendar();
         });
         
-        currentDate = new Date();
-        currentDate.setDate(1);
-        renderCalendar();
-        updateProgress();
-
         initializeFirebase();
     </script>
     <!-- Chosen Palette: Serene Peach -->
