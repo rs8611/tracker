@@ -8,15 +8,11 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Chosen Palette: Serene Peach -->
-    <!-- Application Structure Plan: The application is designed as a single-page dashboard. The main view is an an interactive monthly calendar, allowing users to easily navigate through their pregnancy journey. Above the calendar, a dynamic summary panel shows key stats: current week, trimester, and a progress bar for days completed. This structure was chosen for its intuitive and at-a-glance usability. Users can immediately see their current status and explore past or future months without leaving the page. The primary interaction is checking off days, which provides a sense of accomplishment and progress. -->
-    <!-- Visualization & Content Choices: Report Info: Start/Due Dates -> Goal: Track daily progress -> Viz/Presentation: Interactive Calendar Grid (HTML/CSS) -> Interaction: Click/tap to check off a day. State is saved to localStorage. -> Justification: A calendar is the most intuitive way to visualize a timeline. Checkboxes provide satisfying tactile feedback. Report Info: Key Milestones -> Goal: Highlight important dates -> Viz/Presentation: Styled text labels on the calendar -> Interaction: Visual cue -> Justification: Clearly marks significant events like the 12-week milestone and due date. Report Info: Overall Progress -> Goal: Show progress towards due date -> Viz/Presentation: HTML/CSS Progress Bar -> Interaction: Visual feedback based on checked days -> Justification: Provides a clear, immediate sense of the journey's progression. -->
-    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
     <style>
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #FFF7F0;
-            color: #5C4033;
+            background-color: #F8F4FF; /* Very Light Lilac */
+            color: #3A2E4F; /* Dark Plum */
         }
         .calendar-grid {
             grid-template-columns: repeat(7, minmax(0, 1fr));
@@ -26,19 +22,19 @@
             position: relative;
         }
         .day.checked {
-            background-color: #FABDA3;
-            color: #5C4033;
+            background-color: #C8E6C9; /* Gentle Mint */
+            color: #3A2E4F;
             border-radius: 0.5rem;
         }
         .day.today {
-            border: 2px solid #E57373;
+            border: 2px solid #FFAB91; /* Soft Coral */
             border-radius: 0.5rem;
         }
         .day.milestone {
-            background-color: #FFE0B2;
+            background-color: #F0F4C3; /* Light Lime */
         }
         .day.due-date {
-            background-color: #E57373;
+            background-color: #FF8A65; /* Deep Coral */
             color: white;
         }
         .day-checkbox {
@@ -50,13 +46,14 @@
             cursor: pointer;
             -webkit-appearance: none;
             appearance: none;
-            background-color: rgba(255, 255, 255, 0.5);
+            background-color: rgba(255, 255, 255, 0.7);
             border: 1px solid #D1C4E9;
             border-radius: 4px;
+            z-index: 10;
         }
         .day-checkbox:checked {
-            background-color: #8CC084;
-            border-color: #7CB342;
+            background-color: #81C784; /* Medium Mint */
+            border-color: #66BB6A; /* Darker Mint */
         }
         .day-checkbox:checked::after {
             content: '✔';
@@ -67,38 +64,42 @@
             line-height: 14px;
         }
         .progress-bar-bg {
-            background-color: #E0E0E0;
+            background-color: #E1BEE7; /* Light Lavender */
         }
         .progress-bar-fill {
-            background-color: #8CC084;
+            background-color: #9CCC65; /* Avocado Green */
             transition: width 0.5s ease-in-out;
         }
         .nav-button {
-            background-color: #FABDA3;
-            color: #5C4033;
+            background-color: #E6EE9C; /* Pale Yellow-Green */
+            color: #3A2E4F;
             transition: background-color 0.2s;
         }
         .nav-button:hover {
-            background-color: #F5A684;
+            background-color: #DCE775; /* Lighter Yellow-Green */
         }
         .milestone-text {
             font-size: 0.75rem;
             margin-top: 0.25rem;
-            font-weight: 300;
+            font-weight: 700;
             font-style: italic;
-            color: #E57373;
+            color: #BFA38F; /* Subtle light gold/tan */
+        }
+        .day span {
+            z-index: 5;
+            position: relative;
         }
     </style>
 </head>
 <body class="antialiased">
     <div class="container mx-auto p-4 md:p-8 max-w-4xl">
         <header class="text-center mb-8">
-            <h1 class="text-4xl font-bold text-[#5C4033]">Our Pregnancy Journey</h1>
-            <p class="text-lg text-[#8D6E63] mt-2">From May 29, 2025 to March 5, 2026</p>
+            <h1 class="text-4xl font-bold text-[#3A2E4F]">Our Pregnancy Journey</h1>
+            <p class="text-lg text-[#6A5A82] mt-2">From May 29, 2025 to March 5, 2026</p>
         </header>
 
         <main>
-            <div class="bg-white/80 backdrop-blur-sm rounded-xl shadow-lg p-6 mb-8">
+            <div class="bg-white/80 backdrop-blur-sm rounded-xl shadow-lg p-6 mb-8 border border-gray-100">
                 <h2 class="text-2xl font-semibold mb-4 text-center">Progress Overview</h2>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
                     <div>
@@ -122,13 +123,13 @@
                 </div>
             </div>
 
-            <div class="bg-white/80 backdrop-blur-sm rounded-xl shadow-lg p-4 md:p-6">
+            <div class="bg-white/80 backdrop-blur-sm rounded-xl shadow-lg p-4 md:p-6 border border-gray-100">
                 <div class="flex justify-between items-center mb-4">
-                    <button id="prevMonth" class="nav-button font-bold py-2 px-4 rounded-lg">&lt; Prev</button>
+                    <button id="prevMonth" class="nav-button font-bold py-2 px-4 rounded-lg shadow-sm hover:shadow-md">&lt; Prev</button>
                     <h2 id="monthYear" class="text-2xl font-bold text-center"></h2>
-                    <button id="nextMonth" class="nav-button font-bold py-2 px-4 rounded-lg">Next &gt;</button>
+                    <button id="nextMonth" class="nav-button font-bold py-2 px-4 rounded-lg shadow-sm hover:shadow-md">Next &gt;</button>
                 </div>
-                <div class="grid calendar-grid gap-1 text-center font-semibold text-[#8D6E63] mb-2">
+                <div class="grid calendar-grid gap-1 text-center font-semibold text-[#6A5A82] mb-2">
                     <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
                 </div>
                 <div id="calendar" class="grid calendar-grid gap-1"></div>
@@ -136,7 +137,7 @@
         </main>
 
         <footer class="text-center mt-8 text-sm text-gray-500">
-            <p>Wishing you a healthy and happy pregnancy journey!</p>
+            <p>Preparing for twice the kicks and double the love 💕!</p>
         </footer>
     </div>
 
@@ -234,7 +235,7 @@
                     if ((daysSinceStart + 1) % 7 === 0) {
                         const weekNumber = (daysSinceStart + 1) / 7;
                         const weekNumberText = document.createElement('p');
-                        weekNumberText.textContent = `${weekNumber} Weeks!!!`;
+                        weekNumberText.textContent = `${weekNumber} Weeks!`;
                         weekNumberText.className = 'milestone-text';
                         dayEl.appendChild(weekNumberText);
                     }
